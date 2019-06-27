@@ -11,6 +11,7 @@
 #include <davroska.h>
 #include <dv-stdio.h>
 #include <dv-string.h>
+#include <frame.h>
 
 /* This include file selects the hardware type
 */
