@@ -11,7 +11,7 @@
 #include <davroska.h>
 #include <dv-stdio.h>
 #include <dv-string.h>
-#include <frame.h>
+#include <frame-manager.h>
 
 /* This include file selects the hardware type
 */
@@ -47,56 +47,64 @@ dv_id_t Timer;			/* ISRs */
 */
 void main_T5a(void)
 {
-	FrameChain();
+	fm_TaskStart();
+	fm_TaskEnd();
 }
 
-/* main_T5b() - task body function for the 5ms 'a' task (end of every frame)
+/* main_T5b() - task body function for the 5ms 'b' task (end of every frame)
 */
 void main_T5b(void)
 {
-	FrameChain();
+	fm_TaskStart();
+	fm_TaskEnd();
 }
 
 /* main_T10a() - task body function for the 10ms 'a' task (even frames)
 */
 void main_T10a(void)
 {
-	FrameChain();
+	fm_TaskStart();
+	fm_TaskEnd();
 }
 
 /* main_T10b() - task body function for the 10ms 'b' task (odd frames)
 */
 void main_T10b(void)
 {
-	FrameChain();
+	fm_TaskStart();
+	fm_TaskEnd();
 }
 
 /* main_T20a() - task body function for the 10ms 'a' task (frame 0)
 */
 void main_T20a(void)
 {
-	FrameChain();
+	fm_TaskStart();
+	fm_TaskEnd();
 }
 
 /* main_T20b() - task body function for the 10ms 'b' task (frame 1)
 */
 void main_T20b(void)
 {
-	FrameChain();
+	fm_TaskStart();
+	fm_TaskEnd();
 }
 
 /* main_T20c() - task body function for the 10ms 'c' task (frame 2)
 */
 void main_T20c(void)
 {
-	FrameChain();
+	fm_TaskStart();
+	fm_TaskEnd();
 }
 
 /* main_T20d() - task body function for the 10ms 'd' task (frame 3)
 */
 void main_T20d(void)
 {
-	FrameChain();
+	fm_TaskStart();
+	fm_TaskEnd();
 }
 
 /* main_Timer() - body of ISR to handle interval timer interrupt
@@ -111,6 +119,15 @@ void main_Timer(void)
 void callout_addtasks(dv_id_t mode)
 {
 	T5a = dv_addtask("T5a", &main_T5a, 4, 1);
+	T5b = dv_addtask("T5b", &main_T5b, 4, 1);
+	T10a = dv_addtask("T10a", &main_T10a, 4, 1);
+	T10b = dv_addtask("T10b", &main_T10b, 4, 1);
+	T20a = dv_addtask("T20a", &main_T20a, 4, 1);
+	T20b = dv_addtask("T20b", &main_T20b, 4, 1);
+	T20c = dv_addtask("T20c", &main_T20c, 4, 1);
+	T20d = dv_addtask("T20d", &main_T20d, 4, 1);
+
+	fm_CreateTasks();
 }
 
 /* callout_addisrs() - configure the isrs
@@ -148,6 +165,30 @@ void callout_addalarms(dv_id_t mode)
 */
 void callout_autostart(dv_id_t mode)
 {
+	fm_Init();
+
+	/* This sequuence defines the tasks in each frame as well as the order
+	*/
+	fm_AddTask(0, T5a);		/* Frame 0 */
+	fm_AddTask(0, T10a);
+	fm_AddTask(0, T20a);
+	fm_AddTask(0, T5b);
+
+	fm_AddTask(1, T5a);		/* Frame 1 */
+	fm_AddTask(1, T10b);
+	fm_AddTask(1, T20b);
+	fm_AddTask(1, T5b);
+
+	fm_AddTask(2, T5a);		/* Frame 2 */
+	fm_AddTask(2, T10a);
+	fm_AddTask(2, T20c);
+	fm_AddTask(2, T5b);
+
+	fm_AddTask(3, T5a);		/* Frame 3 */
+	fm_AddTask(3, T10b);
+	fm_AddTask(3, T20d);
+	fm_AddTask(3, T5b);
+
 	hw_InitialiseMillisecondTicker(5);
 	dv_enable_irq(hw_TimerInterruptId);
 }

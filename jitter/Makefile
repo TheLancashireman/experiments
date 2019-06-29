@@ -96,6 +96,9 @@ LD_OPT		+=	-lc
 # The program code
 LD_OBJS	+= $(OBJ_D)/jitter.o
 
+# The frame manager
+LD_OBJS	+= $(OBJ_D)/frame-manager.o
+
 # davroska and associated library files
 LD_OBJS	+= $(OBJ_D)/davroska.o
 LD_OBJS	+= $(OBJ_D)/davroska-time.o
