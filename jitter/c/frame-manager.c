@@ -1,7 +1,7 @@
 /* frame-manager.c - source code for a frame manager
  *
  * Each frame starts with the FrameStart task.
- * The  FrameStart task does some housekeeping and error recording/recovery.
+ * The FrameStart task does some housekeeping and error recording/recovery.
  * Then each task in the frame is chained in sequence.
  * The last task in each fram id the FrameEnd task, which increments the next_frame index and clears
  * the running flag. Finally, it terminaes and drops back to whatever got interrupted.
@@ -20,11 +20,23 @@
 
 dv_id_t fm_frameStart, fm_frameEnd;	/* Task IDs */
 
+struct timing_s
+{
+	dv_u64_t t_min;
+	dv_u64_t t_max;
+	dv_u64_t t_sum;
+	int n;
+};
+
 struct job_s
 {
 	dv_u64_t start_time;
 	dv_u64_t end_time;
+	dv_u64_t prev_start_time;
 	dv_id_t task;
+	struct timing_s latency;		/* From end of previous task to start of task */
+	struct timing_s runtime;		/* From start of task to end of task */
+	struct timing_s interval;		/* From previous start time to new start time */
 };
 
 struct frame_s
@@ -34,7 +46,12 @@ struct frame_s
 	dv_qty_t n_overruns;
 	dv_u64_t activation_time;
 	dv_u64_t start_time;
+	dv_u64_t prev_activation_time;
+	dv_u64_t prev_start_time;
 	int n_runs;
+	struct timing_s act_interval;		/* From previous activation time to new activation time */
+	struct timing_s start_interval;		/* From previous start time to new start time */
+	struct timing_s latency;			/* From activation to start */
 };
 
 struct framemanager_s
@@ -54,6 +71,26 @@ struct framemanager_s framemanager;
 void main_FrameStart(void);
 void main_FrameEnd(void);
 void fm_ComputeTimes(void);
+
+static inline void fm_InitTime(struct timing_s *ts)
+{
+	ts->t_min = 0xffffffffffffffff;
+	ts->t_max = 0;
+	ts->t_sum = 0;
+	ts->n = 0;
+}
+
+static inline void fm_StoreTime(struct timing_s *ts, dv_u64_t t_from, dv_u64_t t_to)
+{
+	if ( t_from != 0 )
+	{
+		dv_u64_t diff = t_to - t_from;
+		if ( ts->t_min > diff )	ts->t_min = diff;
+		if ( ts->t_max < diff )	ts->t_max = diff;
+		ts->t_sum += diff;
+		ts->n++;
+	}
+}
 
 /* fm_CreateTasks() - create the fm_frameStart and fm_frameEnd tasks
  *
@@ -75,16 +112,30 @@ void fm_Init(void)
 	framemanager.current_job = 0;
 	framemanager.next_frame = 0;
 	framemanager.current_frame = 0;
+	framemanager.activation_time = 0;
 
 	for (int f = 0; f < FM_MAXFRAMES; f++)
 	{
 		framemanager.frames[f].n_overruns = 0;
 		framemanager.frames[f].n_jobs = 0;
 		framemanager.frames[f].n_runs = 0;
+		framemanager.frames[f].activation_time = 0;
+		framemanager.frames[f].start_time = 0;
+		framemanager.frames[f].prev_activation_time = 0;
+		framemanager.frames[f].prev_start_time = 0;
+		fm_InitTime(&framemanager.frames[f].act_interval);
+		fm_InitTime(&framemanager.frames[f].start_interval);
+		fm_InitTime(&framemanager.frames[f].latency);
 
 		for ( int j = 0; j < FM_MAXJOBS; j++ )
 		{
 			framemanager.frames[f].jobs[j].task = fm_frameEnd;
+			framemanager.frames[f].jobs[j].start_time = 0;
+			framemanager.frames[f].jobs[j].end_time = 0;
+			framemanager.frames[f].jobs[j].prev_start_time = 0;
+			fm_InitTime(&framemanager.frames[f].jobs[j].latency);
+			fm_InitTime(&framemanager.frames[f].jobs[j].runtime);
+			fm_InitTime(&framemanager.frames[f].jobs[j].interval);
 		}
 	}
 }
@@ -216,11 +267,33 @@ void main_FrameEnd(void)
 	dv_terminatetask();
 }
 
-/* fm_ComputeTimes() - computes the timing for all tasks in a frame.
+/* fm_ComputeTimes() - computes the timing for the current frame.
  *
  * Called at the end of each frame
  * Calculates:
+ *	- for frame:
+ *		- act_interval		- time from previous activation to current activation
+ *		- start_interval	- time from previous start to current start
+ *		- latency			- time from activation to start
+ *	- for each job:
+ *		- latency			- time from end of previous job to start of job
+ *		- runtime			- time from start to end
+ *		- interval			- time from previous start to current start
 */
 void fm_ComputeTimes(void)
 {
+	dv_id_t f = framemanager.current_frame;
+	struct frame_s *fr = &framemanager.frames[f];
+
+	fm_StoreTime(&fr->act_interval, fr->prev_activation_time, fr->activation_time);
+	fm_StoreTime(&fr->start_interval, fr->prev_start_time, fr->start_time);
+	fm_StoreTime(&fr->latency, fr->activation_time, fr->start_time);
+
+	fr->prev_activation_time = fr->activation_time;
+	fr->prev_start_time = fr->start_time;
+
+	for ( dv_id_t j = 0; j < fr->n_jobs; j++)
+	{
+		/* ToDo: all the jobs in the frame */
+	}
 }
