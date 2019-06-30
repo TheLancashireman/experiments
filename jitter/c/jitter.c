@@ -112,6 +112,8 @@ void main_T20d(void)
 void main_Timer(void)
 {
 	hw_ClearTimer();
+
+	fm_StartFrame();
 }
 
 /* callout_addtasks() - configure the tasks
