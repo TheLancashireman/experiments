@@ -294,6 +294,20 @@ void fm_ComputeTimes(void)
 
 	for ( dv_id_t j = 0; j < fr->n_jobs; j++)
 	{
-		/* ToDo: all the jobs in the frame */
+		if ( j == 0 )
+		{
+			/* For the first job, the latency is the time from the frame start
+			*/
+			fm_StoreTime(&fr->jobs[j].latency, fr->start_time, fr->jobs[j].start_time);
+		}
+		else
+		{
+			fm_StoreTime(&fr->jobs[j].latency, fr->jobs[j-1].end_time, fr->jobs[j].start_time);
+		}
+
+		fm_StoreTime(&fr->jobs[j].runtime, fr->jobs[j].start_time, fr->jobs[j].end_time);
+		fm_StoreTime(&fr->jobs[j].interval, fr->jobs[j].prev_start_time, fr->jobs[j].start_time);
+
+		fr->jobs[j].prev_start_time = fr->jobs[j].start_time;
 	}
 }
