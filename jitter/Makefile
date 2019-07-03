@@ -91,7 +91,7 @@ CC_OPT		+= -O2
 LD_OPT		+= -e $(ENTRY)
 LD_OPT		+= -T $(LDSCRIPT)
 LD_OPT		+=	-L $(LDLIB_D)
-LD_OPT		+=	-lc
+LD_OPT		+=	-lc -lgcc
 
 # The program code
 LD_OBJS	+= $(OBJ_D)/jitter.o

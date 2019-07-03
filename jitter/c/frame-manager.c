@@ -12,11 +12,16 @@
 #include <dv-config.h>
 #include <davroska.h>
 #include <frame-manager.h>
+#include <dv-stdio.h>
 
 #include TARGET_HDR
 
 #define FM_MAXJOBS		16
 #define FM_MAXFRAMES	16
+
+/* For the experiment: print the results after this many rounds
+*/
+#define FM_NROUNDS		10
 
 dv_id_t fm_frameStart, fm_frameEnd;	/* Task IDs */
 
@@ -25,7 +30,7 @@ struct timing_s
 	dv_u64_t t_min;
 	dv_u64_t t_max;
 	dv_u64_t t_sum;
-	int n;
+	unsigned n;
 };
 
 struct job_s
@@ -64,6 +69,7 @@ struct framemanager_s
 	dv_id_t max_frame;
 	dv_qty_t n_overruns;
 	dv_u64_t activation_time;
+	dv_u64_t rounds;
 };
 
 struct framemanager_s framemanager;
@@ -71,6 +77,7 @@ struct framemanager_s framemanager;
 void main_FrameStart(void);
 void main_FrameEnd(void);
 void fm_ComputeTimes(void);
+void fm_PrintResults(void);
 
 static inline void fm_InitTime(struct timing_s *ts)
 {
@@ -113,6 +120,7 @@ void fm_Init(void)
 	framemanager.next_frame = 0;
 	framemanager.current_frame = 0;
 	framemanager.activation_time = 0;
+	framemanager.rounds = 0;
 
 	for (int f = 0; f < FM_MAXFRAMES; f++)
 	{
@@ -256,11 +264,18 @@ void main_FrameEnd(void)
 	else
 	{
 		framemanager.next_frame = 0;
+		framemanager.rounds++;
 	}
 
 	fm_ComputeTimes();
 
 	framemanager.running = 0;
+
+#ifdef FM_NROUNDS
+	if ( framemanager.rounds == FM_NROUNDS )
+		fm_PrintResults();
+#endif
+		
 
 	/* Fall back to idle loop
 	*/
@@ -309,5 +324,53 @@ void fm_ComputeTimes(void)
 		fm_StoreTime(&fr->jobs[j].interval, fr->jobs[j].prev_start_time, fr->jobs[j].start_time);
 
 		fr->jobs[j].prev_start_time = fr->jobs[j].start_time;
+	}
+}
+
+/* fm_PrintTimes() - print the contents of a timing structure
+ *
+*/
+void fm_PrintTimes(struct timing_s *t, char *descr, char *obj, dv_id_t id)
+{
+	if ( t->n <= 0 )
+		return;
+
+	dv_u64_t mean = (t->t_sum + (t->n/2)) / t->n;
+
+	dv_u32_t mean32 = (mean > 0xffffffff) ? 0xffffffff : mean;
+	dv_u32_t min32 = (t->t_min > 0xffffffff) ? 0xffffffff : t->t_min;
+	dv_u32_t max32 = (t->t_max > 0xffffffff) ? 0xffffffff : t->t_max;
+
+	dv_printf("%s times for %s %d: min %u, mean %u, max %u\n", descr, obj, id, min32, mean32, max32);
+}
+
+/* fm_PrintResults() - print all the timing at the end of the run
+ *
+*/
+void fm_PrintResults(void)
+{
+	dv_id_t f, j;
+
+	/* First the frame timings
+	*/
+	for ( f = 0; f <= framemanager.max_frame; f++ )
+	{
+		fm_PrintTimes(&framemanager.frames[f].act_interval, "Activation interval", "frame", f); 
+		fm_PrintTimes(&framemanager.frames[f].start_interval, "Start interval", "frame", f); 
+		fm_PrintTimes(&framemanager.frames[f].latency, "Latency", "frame", f); 
+	}
+
+	/* Then the individual job timings
+	*/
+	for ( f = 0; f <= framemanager.max_frame; f++ )
+	{
+		dv_printf("Job timings for frame %d:\n", f);
+		for ( j = 0; j < framemanager.frames[f].n_jobs; j++)
+		{
+			fm_PrintTimes(&framemanager.frames[f].jobs[j].interval, "  Interval", "job", j);
+			fm_PrintTimes(&framemanager.frames[f].jobs[j].runtime, " Runtime", "job", j);
+			fm_PrintTimes(&framemanager.frames[f].jobs[j].latency, " Latency", "job", j);
+		}
+		dv_printf("\n");
 	}
 }

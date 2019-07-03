@@ -32,7 +32,7 @@
 /* DV_CFG_MAXEXTENDED is the maximum number of extended executables that you can create.
  * If this is zero, the event API is omitted.
 */
-#define DV_CFG_MAXEXTENDED	5
+#define DV_CFG_MAXEXTENDED	0
 
 /* DV_CFG_MAXPRIO is the maximum number of different priorities that you can use
  * The number includes all task and ISR priorities
@@ -42,7 +42,7 @@
 /* DV_CFG_NSLOT_EXTRA is the number of extra queue slots you need for tasks with maxact > 1
  * If this is zero the "multiple activations" feature is omitted,
 */
-#define DV_CFG_NSLOT_EXTRA	10
+#define DV_CFG_NSLOT_EXTRA	0
 
 /* DV_CFG_MAXMUTEX is the maximum number of mutexes that you can create
 */
