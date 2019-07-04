@@ -187,6 +187,13 @@ void fm_AddTask(dv_id_t frame, dv_id_t task)
 */
 void fm_StartFrame(void)
 {
+#ifdef FM_NROUNDS
+	/* For timing tests: stop activating after configured number of rounds
+	*/
+	if ( framemanager.rounds >= FM_NROUNDS )
+		return;
+#endif
+
 	framemanager.activation_time = dv_readtime();
 	dv_activatetask(fm_frameStart);
 }
@@ -368,8 +375,8 @@ void fm_PrintResults(void)
 		for ( j = 0; j < framemanager.frames[f].n_jobs; j++)
 		{
 			fm_PrintTimes(&framemanager.frames[f].jobs[j].interval, "  Interval", "job", j);
-			fm_PrintTimes(&framemanager.frames[f].jobs[j].runtime, " Runtime", "job", j);
-			fm_PrintTimes(&framemanager.frames[f].jobs[j].latency, " Latency", "job", j);
+			fm_PrintTimes(&framemanager.frames[f].jobs[j].runtime,  "  Runtime", "job", j);
+			fm_PrintTimes(&framemanager.frames[f].jobs[j].latency,  "  Latency", "job", j);
 		}
 		dv_printf("\n");
 	}

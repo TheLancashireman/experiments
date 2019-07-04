@@ -14,7 +14,6 @@
 #include <dv-arm-bcm2835-interruptcontroller.h>
 #include <dv-armv6-mmu.h>
 #include <dv-arm-cp15.h>
-#include <dv-arm-bcm2835-systimer.h>
 #include <dv-arm-bcm2835-armtimer.h>
 
 extern int main(int argc, char **argv);

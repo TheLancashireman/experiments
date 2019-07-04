@@ -191,6 +191,9 @@ void callout_autostart(dv_id_t mode)
 	fm_AddTask(3, T20d);
 	fm_AddTask(3, T5b);
 
+	dv_arm_bcm2835_armtimer_set_frc_prescale(1);
+	dv_arm_bcm2835_armtimer_enable_frc();
+
 	hw_InitialiseMillisecondTicker(5);
 	dv_enable_irq(hw_TimerInterruptId);
 }
