@@ -13,7 +13,6 @@
 #include <dv-arm-bcm2835-gpio.h>
 #include <dv-arm-bcm2835-interruptcontroller.h>
 #include <dv-armv8-mmu.h>
-#include <dv-arm-bcm2835-systimer.h>
 #include <dv-arm-bcm2835-armtimer.h>
 
 extern dv_u64_t dv_c1_stack_top, dv_c2_stack_top, dv_c3_stack_top;
