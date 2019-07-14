@@ -8,6 +8,18 @@
 #define DV_ASM  0
 #include <davroska.h>
 
+/* Enumerated type to identify location in the frame/round, for (e.g.) cache maintenance
+*/
+enum fm_frameLocation_e
+{
+	fm_nowhere,
+	fm_atRoundStart,
+	fm_atFrameStart,
+	fm_atFrameEnd
+};
+
+	
+
 extern void fm_CreateTasks(void);
 extern void fm_Init(void);
 extern void fm_AddTask(dv_id_t frame, dv_id_t task);

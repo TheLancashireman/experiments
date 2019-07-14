@@ -16,8 +16,14 @@
 
 #include TARGET_HDR
 
+#include <dv-arm-cache.h>
+
 #define FM_MAXJOBS		16
 #define FM_MAXFRAMES	16
+
+/* For the experiment: ignore the results for this many rounds
+*/
+#define FM_IGNOREROUNDS	2
 
 /* For the experiment: print the results after this many rounds
 */
@@ -59,6 +65,17 @@ struct frame_s
 	struct timing_s latency;			/* From activation to start */
 };
 
+/* Different types of cache/TLB etc. maintenance
+*/
+struct cacheop_s
+{
+	dv_i8_t icache;
+	dv_i8_t dcache;
+	dv_i8_t prefetch;
+	dv_i8_t branchpredict;
+	dv_i8_t tlb;
+};
+
 struct framemanager_s
 {
 	struct frame_s frames[FM_MAXFRAMES];
@@ -70,6 +87,8 @@ struct framemanager_s
 	dv_qty_t n_overruns;
 	dv_u64_t activation_time;
 	dv_u64_t rounds;
+	enum fm_frameLocation_e whereCacheMaintenance;
+	struct cacheop_s cacheop;
 };
 
 struct framemanager_s framemanager;
@@ -78,6 +97,7 @@ void main_FrameStart(void);
 void main_FrameEnd(void);
 void fm_ComputeTimes(void);
 void fm_PrintResults(void);
+void fm_CacheMaintenance(enum fm_frameLocation_e where);
 
 static inline void fm_InitTime(struct timing_s *ts)
 {
@@ -121,6 +141,7 @@ void fm_Init(void)
 	framemanager.current_frame = 0;
 	framemanager.activation_time = 0;
 	framemanager.rounds = 0;
+	framemanager.whereCacheMaintenance = fm_nowhere;
 
 	for (int f = 0; f < FM_MAXFRAMES; f++)
 	{
@@ -238,6 +259,8 @@ void main_FrameStart(void)
 		*/
 	}
 
+	fm_CacheMaintenance(fm_atFrameStart);
+
 	/* Go to next frame
 	*/
 	framemanager.current_frame = framemanager.next_frame;
@@ -275,11 +298,46 @@ void main_FrameEnd(void)
 	if ( framemanager.rounds == FM_NROUNDS )
 		fm_PrintResults();
 #endif
-		
+
+	/* Configured cache maintenance
+	*/
+	fm_CacheMaintenance(fm_atFrameEnd);
 
 	/* Fall back to idle loop
 	*/
 	dv_terminatetask();
+}
+
+/* fm_CacheMaintenance() - performs the configured cache/TLB maintenance
+*/
+void fm_CacheMaintenance(enum fm_frameLocation_e where)
+{
+	if ( framemanager.whereCacheMaintenance == where )
+	{
+		if ( framemanager.cacheop.icache )
+		{
+			dv_invalidate_entire_instruction_cache();
+		}
+
+		if ( framemanager.cacheop.dcache )
+		{
+			dv_clean_entire_data_cache();
+		}
+
+		if ( framemanager.cacheop.prefetch )
+		{
+			dv_flush_prefetch_buffer();
+		}
+
+		if ( framemanager.cacheop.branchpredict )
+		{
+			dv_flush_entire_branch_target_cache();
+		}
+
+		if ( framemanager.cacheop.tlb )
+		{
+		}
+	}
 }
 
 /* fm_ComputeTimes() - computes the timing for the current frame.
